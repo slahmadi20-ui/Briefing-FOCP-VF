@@ -3,6 +3,7 @@ import React from 'react';
 import { VideoOfTheDay as VideoInfo } from '../types';
 import { Film, ExternalLink } from 'lucide-react';
 import GenerativeImage from './GenerativeImage';
+import SourceLink from './SourceLink';
 
 interface VideoOfTheDayProps {
   videoInfo: VideoInfo;
@@ -44,12 +45,12 @@ const VideoOfTheDay: React.FC<VideoOfTheDayProps> = ({ videoInfo }) => {
   const embedUrl = getYouTubeEmbedUrl(videoUrl);
 
   return (
-    <div className="mb-8 animate-fade-in">
-        <h2 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3 flex items-center gap-2">
-            <Film className="w-4 h-4" />
+    <div className="mb-8 animate-fade-in bg-white p-6 rounded-xl shadow-md border border-gray-100">
+        <h2 className="text-lg font-bold text-gray-900 mb-6 pb-4 border-b border-gray-100 flex items-center gap-2 uppercase tracking-wider">
+            <Film className="w-5 h-5 text-green-700" />
             La Vidéo du Jour
         </h2>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
+        <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden flex flex-col h-full shadow-sm">
             {embedUrl ? (
                 <div className="aspect-video bg-black">
                     <iframe
@@ -64,33 +65,26 @@ const VideoOfTheDay: React.FC<VideoOfTheDayProps> = ({ videoInfo }) => {
                     ></iframe>
                 </div>
             ) : (
-                <div className="aspect-video w-full">
+                <div className="aspect-video w-full bg-gray-100 relative">
                     {/* Fallback : Générer une image représentative si la vidéo manque */}
                     <GenerativeImage 
                         alt={title}
                         prompt={posterImagePrompt || `A cinematic thumbnail image representing: ${title}. Corporate, industrial or economic context in Africa.`}
-                        className="w-full h-full"
+                        className="w-full h-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-black/10 pointer-events-none mix-blend-multiply"></div>
                 </div>
             )}
-            <div className="p-6 flex flex-col flex-grow">
+            <div className="p-6 flex flex-col flex-grow bg-white">
                 <div className="flex-grow">
-                    <h3 className="text-xl font-bold text-gray-900 leading-tight">{title}</h3>
-                    <div className="mt-4">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Analyse</h4>
-                        <p className="mt-2 text-sm text-gray-600 leading-relaxed">{commentary}</p>
+                    <h3 className="text-xl font-bold text-gray-900 leading-tight mb-4">{title}</h3>
+                    <div className="bg-gray-50 border-l-2 border-green-700 p-4 rounded-r-md shadow-sm">
+                        <h4 className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">Analyse</h4>
+                        <p className="text-sm text-gray-700 leading-relaxed">{commentary}</p>
                     </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                     <a 
-                        href={reference.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-center gap-1.5 text-xs text-blue-700 hover:text-blue-900 hover:underline font-semibold"
-                    >
-                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                        <span>Source : {reference.source}</span>
-                    </a>
+                <div className="mt-6 pt-4 border-t border-gray-200 flex items-center">
+                     <SourceLink title={reference.title || title} source={reference.source} />
                 </div>
             </div>
         </div>

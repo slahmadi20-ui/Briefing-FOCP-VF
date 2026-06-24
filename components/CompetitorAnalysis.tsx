@@ -40,7 +40,7 @@ const CompetitorAnalysis: React.FC<CompetitorAnalysisProps> = ({ news }) => {
                 {item.sourceQuality && (
                     <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-100">
                         <ShieldCheck className="w-3 h-3 text-gray-400" />
-                        <span className="text-[10px] font-medium text-gray-500">{item.sourceQuality.split(' - ')[0]}</span>
+                        <span className="text-xs font-medium text-gray-500">{item.sourceQuality.split(' - ')[0]}</span>
                     </div>
                 )}
               </div>

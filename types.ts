@@ -34,6 +34,8 @@ export interface CommodityPrice {
     evolution: string; // e.g., "+12% vs Y-1"
     trend: 'up' | 'down' | 'stable';
     analysis?: string;
+    referenceName?: string; // ex: "Banque Mondiale (Pink Sheet)", "Argus Media", "CRU Group"
+    referenceUrl?: string;  // Lien vers la source ou le rapport d'indice
 }
 
 export interface OcpKeyFigures {
@@ -298,6 +300,40 @@ export interface BriefingData {
   competitorAnalysis: BriefingSection; // Keep this for the section text if needed, or replace/augment
   environmentalIssues: BriefingSection;
   groundingSources?: GroundingSource[];
+}
+
+export interface OcpEcosystemFocusData {
+  entityName: string;
+  category: string;
+  identity: {
+    overview: string;      // Description générale / Mission
+    headquarters: string;  // Siège / implantation
+    creationDate: string;  // Date de création / lancement
+    leaders: string;       // Dirigeants / Responsables
+    keyRoles: string;      // Rôle stratégique / relation OCP
+  };
+  pressArticles: {
+    title: string;
+    summary: string;
+    source: string;
+    date: string;
+    url: string;
+    type: 'Maroc' | 'International';
+  }[];
+  linkedinPosts: {
+    author: string;
+    authorRole: string;
+    content: string;
+    likes: number;
+    comments: number;
+    date: string;
+    url: string;
+  }[];
+  strategicProspects: {
+    opportunities: string[];
+    challenges: string[];
+    futureProjects: string[];
+  };
 }
 
 export enum LoadingState {

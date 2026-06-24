@@ -3,9 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BriefingSection, BriefingPoint, LoadingState } from '../types';
 import { generateBriefingSection } from '../services/geminiService';
-import { LucideIcon, ChevronDown, Dot, ExternalLink, Paperclip, AlertTriangle, RefreshCw, Download, Loader2 } from 'lucide-react';
+import { LucideIcon, ChevronDown, Dot, Paperclip, AlertTriangle, RefreshCw, Download, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import SourceLink from './SourceLink';
 
 interface BriefingCardProps {
   sectionType: string;
@@ -15,6 +16,7 @@ interface BriefingCardProps {
   borderColorClass: string;
   trigger: number;
   loadIndex: number;
+  currentDate: string;
 }
 
 const CollapsibleListItem: React.FC<{ point: BriefingPoint }> = ({ point }) => {
@@ -25,40 +27,37 @@ const CollapsibleListItem: React.FC<{ point: BriefingPoint }> = ({ point }) => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        className="w-full flex justify-between items-center text-left py-3 px-6 hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-100"
+        className="w-full flex justify-between items-center text-left py-3 px-6 hover:bg-white focus:outline-none focus-visible:bg-white transition-colors duration-200"
       >
-        <span className="font-semibold text-gray-800 text-sm flex items-center gap-2">
-           <Dot className="w-6 h-6 text-gray-400 flex-shrink-0" /> 
+        <span className="font-semibold text-gray-900 text-base flex items-center gap-2">
+           <Dot className="w-6 h-6 text-green-700 flex-shrink-0" /> 
            {point.subTitle}
         </span>
         <ChevronDown 
             className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`} 
         />
       </button>
-      {/* Pour le PDF, on force l'affichage du contenu même si fermé dans l'UI, 
-          mais html2canvas capture ce qui est visible. 
-          Pour l'instant, l'export PDF capturera l'état visuel actuel. */}
       <div 
         className={`transition-[max-height,padding] duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[1000px] pb-4' : 'max-h-0'}`}
       >
-        <div className="px-6 ml-6 border-l-2 border-gray-200 pl-4">
+        <div className="px-6 ml-6 border-l-2 border-green-700 pl-4">
             <ReactMarkdown
-              className="prose prose-sm max-w-none text-gray-700"
+              className="prose prose-sm max-w-none text-gray-700 text-sm leading-[1.7]"
               components={{
                   ul: ({node, ...props}) => <ul className="list-disc pl-4 space-y-1" {...props} />,
-                  li: ({node, ...props}) => <li className="text-gray-600" {...props} />,
-                  strong: ({node, ...props}) => <strong className="text-gray-800" {...props} />,
+                  li: ({node, ...props}) => <li className="text-gray-700" {...props} />,
+                  strong: ({node, ...props}) => <strong className="text-gray-900" {...props} />,
               }}
             >
               {point.details}
             </ReactMarkdown>
 
             {point.verificationNeeded && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-yellow-600" />
+              <div className="mt-4 p-[14px] bg-[#FFFBEB] border-l-4 border-l-[#F59E0B] rounded-lg text-[#92400E] flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0 text-orange-500" />
                 <div>
-                  <h5 className="font-bold">Point à vérifier</h5>
-                  <p className="mt-1">{point.verificationNeeded}</p>
+                  <h5 className="font-bold text-sm italic">Point à vérifier</h5>
+                  <p className="mt-1 text-sm italic">{point.verificationNeeded}</p>
                 </div>
               </div>
             )}
@@ -66,21 +65,13 @@ const CollapsibleListItem: React.FC<{ point: BriefingPoint }> = ({ point }) => {
             {point.references && point.references.length > 0 && (
             <div className="mt-4">
                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Paperclip className="w-3 h-3" />
-                    Sources Directes
+                    <Paperclip className="w-3 h-3 text-blue-600" />
+                    SOURCES DIRECTES
                 </h4>
-                <ul className="mt-2 space-y-1.5 pl-1">
+                <ul className="mt-2 space-y-1.5 pl-1 flex flex-col items-start">
                 {point.references.map((ref, i) => (
                     <li key={i}>
-                    <a 
-                        href={ref.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-start gap-1.5 text-xs text-blue-700 hover:text-blue-900 hover:underline"
-                    >
-                        <ExternalLink className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                        <span>{ref.title} <span className="text-gray-500 font-medium">({ref.source})</span></span>
-                    </a>
+                        <SourceLink title={ref.title} source={ref.source} className="border border-blue-50" />
                     </li>
                 ))}
                 </ul>
@@ -93,13 +84,12 @@ const CollapsibleListItem: React.FC<{ point: BriefingPoint }> = ({ point }) => {
 };
 
 
-const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, colorClass, borderColorClass, trigger, title, loadIndex }) => {
+const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, colorClass, borderColorClass, trigger, title, loadIndex, currentDate }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [section, setSection] = useState<BriefingSection | null>(null);
-  const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.LOADING);
+  const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
   const [isDownloading, setIsDownloading] = useState(false);
   
-  // Ref pour capturer le contenu du briefing
   const contentRef = useRef<HTMLDivElement>(null);
   
   const fetchSectionData = React.useCallback(async () => {
@@ -107,57 +97,88 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
       try {
           const data = await generateBriefingSection(sectionType);
           setSection(data);
+          if (currentDate) {
+              localStorage.setItem(`ocp_section_${currentDate}_${sectionType}`, JSON.stringify(data));
+          }
           setLoadingState(LoadingState.SUCCESS);
       } catch (error) {
           console.error(`Failed to load section ${sectionType}:`, error);
           setSection(null);
           setLoadingState(LoadingState.ERROR);
       }
-  }, [sectionType]);
+  }, [sectionType, currentDate]);
+
+  useEffect(() => {
+    if (!currentDate) return;
+    const cacheKey = `ocp_section_${currentDate}_${sectionType}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed) {
+          setSection(parsed);
+          setLoadingState(LoadingState.SUCCESS);
+          return;
+        }
+      } catch (e) {
+        console.error("Cache parsing error:", e);
+      }
+    }
+    setSection(null);
+    setLoadingState(LoadingState.IDLE);
+  }, [currentDate, sectionType]);
 
   useEffect(() => {
     if (trigger > 0) {
-      // Stagger API calls to avoid hitting rate limits.
-      const delay = loadIndex * 1500; // 1.5 second delay between each card load.
+      const cacheKey = `ocp_section_${currentDate}_${sectionType}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed) {
+            setSection(parsed);
+            setLoadingState(LoadingState.SUCCESS);
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const delay = loadIndex * 1500;
       const timer = setTimeout(() => {
         fetchSectionData();
       }, delay);
       
       return () => clearTimeout(timer);
     }
-  }, [trigger, fetchSectionData, loadIndex]);
+  }, [trigger, fetchSectionData, loadIndex, currentDate, sectionType]);
 
   const handleDownloadPdf = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Empêcher la fermeture de l'accordéon
+    e.stopPropagation();
     if (!contentRef.current || !section) return;
 
     setIsDownloading(true);
     
-    // Si la carte est fermée, on l'ouvre temporairement (optionnel, ici on suppose que l'utilisateur imprime ce qu'il voit)
     if (!isExpanded) {
         setIsExpanded(true);
-        // Petit délai pour laisser le temps à l'animation CSS de se faire (ou on force le rendu)
         await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     try {
         const element = contentRef.current;
         
-        // Capture du DOM en canvas
         const canvas = await html2canvas(element, {
-            scale: 2, // Meilleure résolution
+            scale: 2,
             backgroundColor: '#ffffff',
-            useCORS: true // Pour charger les images externes si possible
+            useCORS: true
         });
 
         const imgData = canvas.toDataURL('image/png');
         
-        // Création du PDF A4
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
         
-        // Calcul des dimensions pour faire tenir l'image dans le PDF avec des marges
         const margin = 10;
         const availableWidth = pdfWidth - (margin * 2);
         const imgWidth = canvas.width;
@@ -165,7 +186,6 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
         const ratio = availableWidth / imgWidth;
         const finalHeight = imgHeight * ratio;
 
-        // En-tête du PDF
         pdf.setFontSize(16);
         pdf.setTextColor(40, 40, 40);
         pdf.text(section.title || title, margin, 15);
@@ -174,9 +194,6 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
         pdf.setTextColor(100, 100, 100);
         pdf.text(`Briefing généré le ${new Date().toLocaleDateString('fr-FR')}`, margin, 22);
 
-        // Ajout de l'image du contenu
-        // Si le contenu est très long, jsPDF ne gère pas automatiquement le saut de page avec addImage.
-        // Pour une version simple, on ajoute l'image telle quelle.
         pdf.addImage(imgData, 'PNG', margin, 30, availableWidth, finalHeight);
 
         pdf.save(`Briefing_${sectionType}_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -217,10 +234,10 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
             </div>;
         case LoadingState.SUCCESS:
              if (!section || !section.content || section.content.length === 0) {
-                return <p className="p-6 text-sm text-gray-500 italic">Aucun point de briefing disponible pour cette section.</p>;
+                return null;
              }
              return (
-                <div className="py-2" ref={contentRef}>
+                <div className="py-2 bg-slate-50" ref={contentRef}>
                     <div className="px-6 py-2 md:hidden block">
                         <h2 className="text-xl font-bold text-gray-800 mb-2">{section.title}</h2>
                         <hr className="border-gray-200"/>
@@ -231,24 +248,28 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
                 </div>
              );
         default:
-            return null;
+            return (
+              <div className="p-6 text-center text-sm text-gray-500 italic">
+                En attente de génération...
+              </div>
+            );
     }
   }
 
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border-t-4 ${borderColorClass} flex flex-col h-full overflow-hidden transition-all duration-300 hover:shadow-md`}>
+    <div className={`bg-white rounded-xl shadow-md border-t-[4px] ${borderColorClass} flex flex-col h-full overflow-hidden transition-all duration-300 hover:shadow-md`}>
       <div
-        className={`w-full px-6 py-4 border-b border-gray-100 ${colorClass} bg-opacity-5 flex items-center justify-between transition-colors hover:bg-opacity-10`}
+        className={`w-full px-6 py-4 border-b border-gray-100 ${colorClass} bg-opacity-30 flex items-center justify-between transition-colors hover:bg-opacity-40`}
       >
         <button 
             onClick={() => setIsExpanded(!isExpanded)}
             className="flex items-center gap-3 flex-grow text-left focus:outline-none"
         >
-            <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10 ${borderColorClass.replace('border-', 'text-')}`}>
+            <div className={`p-2 rounded-lg bg-white bg-opacity-60 shadow-sm ${borderColorClass.replace('border-', 'text-')}`}>
                 <Icon className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold text-gray-800">{section?.title || title}</h3>
+            <h3 className="text-lg font-bold text-gray-900">{section?.title || title}</h3>
         </button>
 
         <div className="flex items-center gap-2">
@@ -257,7 +278,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
                     onClick={handleDownloadPdf}
                     disabled={isDownloading}
                     title="Exporter la section en PDF"
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors focus:outline-none"
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors focus:outline-none print:hidden"
                 >
                     {isDownloading ? (
                         <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
@@ -268,7 +289,7 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
             )}
             <button 
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-2 text-gray-500 hover:text-gray-800 rounded-full focus:outline-none"
+                className="p-2 text-gray-500 hover:text-gray-800 rounded-full focus:outline-none print:hidden"
             >
                 <ChevronDown 
                 className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`} 
@@ -278,13 +299,13 @@ const BriefingCard: React.FC<BriefingCardProps> = ({ sectionType, icon: Icon, co
       </div>
       
       <div 
-        className={`transition-[max-height] duration-500 ease-in-out overflow-y-auto ${isExpanded ? 'max-h-[2000px]' : 'max-h-0'}`}
+        className={`transition-[max-height] duration-500 ease-in-out scrollbar-thin overflow-y-auto ${isExpanded ? 'max-h-[2000px]' : 'max-h-0'}`}
       >
         {renderContent()}
       </div>
 
-      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 mt-auto">
-        <p className="text-xs text-gray-400 font-mono text-center">Mise à jour par IA</p>
+      <div className="px-4 py-3 bg-slate-50 border-t border-gray-100 mt-auto">
+        <p className="text-xs text-gray-500 italic text-center">Mise à jour par IA</p>
       </div>
     </div>
   );

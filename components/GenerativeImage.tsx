@@ -95,7 +95,7 @@ const GenerativeImage: React.FC<GenerativeImageProps> = ({
                     <User className="w-10 h-10 opacity-40" />
                     <Search className="w-4 h-4 absolute bottom-0 right-0 opacity-60 bg-slate-100 rounded-full" />
                 </div>
-                <span className="text-[10px] uppercase tracking-wider font-semibold opacity-60">Rechercher</span>
+                <span className="text-xs uppercase tracking-wider font-semibold opacity-60">Rechercher</span>
             </div>
         )}
       </div>

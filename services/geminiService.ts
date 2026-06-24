@@ -103,8 +103,10 @@ const commodityPriceSchema = {
         evolution: { type: Type.STRING, description: "Évolution sur un an (ex: +12%)." },
         trend: { type: Type.STRING, enum: ['up', 'down', 'stable'] },
         analysis: { type: Type.STRING, description: "Variation récente, facteurs explicatifs et corrélation avec le marché agricole." },
+        referenceName: { type: Type.STRING, description: "Nom de l'indice ou de la source de référence (ex: Banque Mondiale, CRU, S&P Global Platts, IndexMundi, Argus)." },
+        referenceUrl: { type: Type.STRING, description: "Lien URL réel vers l'indice officiel ou la page d'information permettant de vérifier ce cours." },
     },
-    required: ['name', 'price', 'unit', 'change', 'lastYearPrice', 'evolution', 'trend'],
+    required: ['name', 'price', 'unit', 'change', 'lastYearPrice', 'evolution', 'trend', 'referenceName', 'referenceUrl'],
 };
 
 const highlightSchema = {
@@ -440,7 +442,10 @@ export const generateDashboardCore = async (date: Date): Promise<Partial<Briefin
     - Ajoute 3 news confirmées récentes.
 
     IMPORTANT POUR LES MATIÈRES PREMIÈRES :
-    - Inclus le prix de l'année dernière (N-1) et l'évolution en %.
+    - Tu DOIS absolument inclure les cours de référence indispensables suivants : Roche phosphatée, Urée, DAP, TSP (Triple Superphosphate), Soufre (ou Soufre brut/liquide) et Gaz naturel (impactant la production d'ammoniac et d'urée).
+    - Pour chaque matière première (particulièrement pour le TSP et le Soufre), fais une recherche web approfondie en direct pour obtenir le prix de référence le plus récent et exact. Précise l'unité de mesure correcte (généralement  $/tonne , ou  $/MMBtu  pour le gaz), le pourcentage de variation journalière ou du dernier rapport (ex : +1.5%), le prix de l'année dernière (N-1), et l'évolution correspondante (ex : +15% vs N-1).
+    - Pour chaque cours, indique obligatoirement un nom d'indice ou de source de référence officiel et fiable (ex : Banque Mondiale Pink Sheet, IndexMundi, Argus, CRU Group, S&P Global Platts) et l'URL source réelle associée pour permettre la vérification instantanée du cours.
+    - Ajoute également une brève analyse concise de la tendance de chaque cours (facteurs d'offre/demande, logistique ou géopolitique).
 
     EXCLURE les sections d'analyse détaillées (marocNews, ocpEcosystem, etc.). Fournis uniquement les éléments rapides : alertes, prix, highlights, événements, etc.`;
 
@@ -770,6 +775,101 @@ export const generateCountryFocus = async (countryName: string): Promise<Country
             console.error(`Failed to parse country focus JSON for ${countryName}:`, e);
             console.error("Received text:", jsonText);
             throw new Error(`Invalid JSON response from AI for country focus: ${countryName}.`);
+        }
+    });
+};
+
+const ocpEcosystemFocusSchema = {
+    type: Type.OBJECT,
+    properties: {
+        entityName: { type: Type.STRING },
+        category: { type: Type.STRING },
+        identity: {
+            type: Type.OBJECT,
+            properties: {
+                overview: { type: Type.STRING, description: "Description générale concise, son but historique ou sa mission." },
+                headquarters: { type: Type.STRING, description: "Où se situent ses bureaux ou son activité principale." },
+                creationDate: { type: Type.STRING, description: "Année de création ou de lancement." },
+                leaders: { type: Type.STRING, description: "Noms des figures clés, directeurs généraux ou responsables." },
+                keyRoles: { type: Type.STRING, description: "Son rôle stratégique au sein de l'écosystème OCP ou UM6P ou filiales de services." }
+            },
+            required: ['overview', 'headquarters', 'creationDate', 'leaders', 'keyRoles']
+        },
+        pressArticles: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING, description: "Titre réaliste et accrocheur d'un article de presse récent ou historique pertinent." },
+                    summary: { type: Type.STRING, description: "Synthèse de l'actualité ou de l'article." },
+                    source: { type: Type.STRING, description: "Nom de l'organe de presse (ex: L'Économiste, Médias24, Le Matin, Jeune Afrique, Reuters, Financial Times)." },
+                    date: { type: Type.STRING, description: "Date réelle de publication au format JJ/MM/AAAA." },
+                    url: { type: Type.STRING, description: "L'URL de source ou recherche générée." },
+                    type: { type: Type.STRING, description: "Soit 'Maroc' ou 'International'." }
+                },
+                required: ['title', 'summary', 'source', 'date', 'url', 'type']
+            },
+            description: "Trouve ou génère 2-3 articles d'actualité très réalistes de presse marocaine ou internationale sur cette entité."
+        },
+        linkedinPosts: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    author: { type: Type.STRING, description: "Nom complet d'un collaborateur ou leader réaliste ou de la page officielle." },
+                    authorRole: { type: Type.STRING, description: "Poste de l'auteur (ex: Directeur d'Innovation sociale, Chef de Programme, Page Officielle)." },
+                    content: { type: Type.STRING, description: "Contenu rédigé au style professionnel LinkedIn avec hashtags, emojis de manière sobre." },
+                    likes: { type: Type.NUMBER },
+                    comments: { type: Type.NUMBER },
+                    date: { type: Type.STRING, description: "Date du post (ex: Il y a 2 jours, 1 semaine)." },
+                    url: { type: Type.STRING, description: "L'URL simulée ou réelle du post LinkedIn." }
+                },
+                required: ['author', 'authorRole', 'content', 'likes', 'comments', 'date', 'url']
+            },
+            description: "Génère 2 posts LinkedIn professionnels et très réalistes illustrant les succès, levées de fonds, innovations, lancements ou recrutements de l'entité."
+        },
+        strategicProspects: {
+            type: Type.OBJECT,
+            properties: {
+                opportunities: { type: Type.ARRAY, items: { type: Type.STRING } },
+                challenges: { type: Type.ARRAY, items: { type: Type.STRING } },
+                futureProjects: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['opportunities', 'challenges', 'futureProjects']
+        }
+    },
+    required: ['entityName', 'category', 'identity', 'pressArticles', 'linkedinPosts', 'strategicProspects']
+};
+
+export const generateOcpEcosystemFocus = async (entityName: string): Promise<any> => {
+    return apiLimiter.enqueue(async () => {
+        const ai = getClient();
+        const prompt = `Génère un rapport de veille détaillé et exhaustif pour l'entité suivante de l'écosystème OCP : "${entityName}".
+
+Respecte scrupuleusement le schéma de réponse demandé.
+Les informations doivent être les plus précises et sourcées possibles.
+- Les articles de presse doivent couvrir l'actualité au Maroc et à l'international concernant l'entité et ses projets.
+- Les posts LinkedIn doivent refléter des annonces réelles ou très plausibles de dirigeants/collaborateurs ou de la page institutionnelle officielle avec des mesures précises d'engagement.
+- Rédige en français professionnel, clair et objectif.
+`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: ocpEcosystemFocusSchema,
+                tools: [{ googleSearch: {} }],
+            },
+        });
+
+        const jsonText = response.text.trim();
+        try {
+            return JSON.parse(jsonText);
+        } catch (e) {
+            console.error(`Failed to parse OCP Ecosystem focus JSON for ${entityName}:`, e);
+            console.error("Received text:", jsonText);
+            throw new Error(`Impossible de formater les données pour l'entité : ${entityName}.`);
         }
     });
 };

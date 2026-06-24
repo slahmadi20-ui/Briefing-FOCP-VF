@@ -5,7 +5,6 @@ import AlertsTable from './components/AlertsTable';
 import BriefingCard from './components/BriefingCard';
 import CommodityPrices from './components/CommodityPrices';
 import Highlights from './components/Highlights';
-import CountryFocus from './components/CountryFocus';
 import OcpGroupNews from './components/OcpGroupNews';
 import InternationalEvents from './components/InternationalEvents';
 import ImageOfTheDay from './components/ImageOfTheDay';
@@ -18,6 +17,8 @@ import WeakSignals from './components/WeakSignals';
 import StrategicArticle from './components/StrategicArticle';
 import OCPDashboard from './components/OCPDashboard';
 import CompetitorAnalysis from './components/CompetitorAnalysis';
+import OcpEcosystemFocus from './components/OcpEcosystemFocus';
+import CountryFocus from './components/CountryFocus';
 import { generateDashboardCore, refreshBriefingSection } from './services/geminiService';
 import { BriefingData, LoadingState } from './types';
 import { showBriefingReadyNotification } from './utils/notifications';
@@ -33,12 +34,12 @@ const briefingSections = [
     { type: 'environmentalIssues', title: 'Enjeux Environnementaux', icon: Leaf, colorClass: 'bg-teal-100', borderColorClass: 'border-teal-500' },
 ];
 
-
 const App: React.FC = () => {
   const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
   const [dashboardData, setDashboardData] = useState<Partial<BriefingData> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generationTrigger, setGenerationTrigger] = useState(0);
+  const [briefingsHistory, setBriefingsHistory] = useState<Partial<BriefingData>[]>([]);
 
   const handleGenerate = async () => {
     setLoadingState(LoadingState.LOADING);
@@ -64,7 +65,6 @@ const App: React.FC = () => {
         if (!prev) return prev;
         
         if (section === 'strategicMoves-OCP' || section === 'strategicMoves-International') {
-            // ... (existing logic for strategic moves)
             const currentMoves = prev.strategicMoves || [];
             const isOcpRefresh = section === 'strategicMoves-OCP';
             
@@ -91,7 +91,46 @@ const App: React.FC = () => {
     }
   };
   
+  // Set up auto history storage sync
   useEffect(() => {
+    if (dashboardData && dashboardData.date) {
+      setBriefingsHistory(prev => {
+        const index = prev.findIndex(item => item.date === dashboardData.date);
+        if (index === -1) {
+          let updated = [dashboardData, ...prev];
+          if (updated.length > 5) {
+            updated = updated.slice(0, 5);
+          }
+          localStorage.setItem('ocp_briefings_history', JSON.stringify(updated));
+          return updated;
+        } else {
+          if (JSON.stringify(prev[index]) !== JSON.stringify(dashboardData)) {
+            const updated = [...prev];
+            updated[index] = dashboardData;
+            localStorage.setItem('ocp_briefings_history', JSON.stringify(updated));
+            return updated;
+          }
+        }
+        return prev;
+      });
+    }
+  }, [dashboardData]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ocp_briefings_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBriefingsHistory(parsed);
+          setDashboardData(parsed[0]);
+          setLoadingState(LoadingState.SUCCESS);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse history from localStorage:", e);
+      }
+    }
     handleGenerate();
   }, []);
 
@@ -124,8 +163,9 @@ const App: React.FC = () => {
               {dashboardData.ocpKeyFigures && <OCPDashboard data={dashboardData.ocpKeyFigures} />}
               {dashboardData.highlights && <Highlights highlights={dashboardData.highlights} />}
               {dashboardData.strategicArticle && <StrategicArticle article={dashboardData.strategicArticle} />}
-              <CountryFocus />
               {dashboardData.ocpGroupNews && <OcpGroupNews news={dashboardData.ocpGroupNews} />}
+              <OcpEcosystemFocus />
+              <CountryFocus />
               {dashboardData.competitorNews && <CompetitorAnalysis news={dashboardData.competitorNews} />}
               {dashboardData.weakSignals && <WeakSignals signals={dashboardData.weakSignals} />}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -157,7 +197,7 @@ const App: React.FC = () => {
                         colorClass={section.colorClass}
                         borderColorClass={section.borderColorClass}
                         trigger={generationTrigger}
-                        loadIndex={index}
+                        loadIndex={index} currentDate={dashboardData?.date || ''}
                     />
                  ))}
               </div>
@@ -201,6 +241,12 @@ const App: React.FC = () => {
         onGenerate={handleGenerate} 
         isLoading={loadingState === LoadingState.LOADING}
         currentDate={dashboardData?.date || new Date().toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        history={briefingsHistory}
+        onSelectBriefing={(briefing) => {
+          setDashboardData(briefing);
+          setLoadingState(LoadingState.SUCCESS);
+          setGenerationTrigger(prev => prev + 1);
+        }}
       />
 
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
